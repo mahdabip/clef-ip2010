@@ -20,23 +20,11 @@ import org.terrier.structures.Index;
  */
 public class LMQueryBuilder {
 
-	static { System.setProperty("terrier.home","/Users/usiusi/tools/terrier-3.0"); }
-	private static Index index;
-	private static long N;
-
-	private LMQueryBuilder(String indexDirectory, String indexPrefix) {
-		index = Index.createIndex(indexDirectory, indexPrefix);
-		N = index.getCollectionStatistics().getNumberOfTokens();
-
-		System.out.println("Number of Documents: " + index.getCollectionStatistics().getNumberOfDocuments());
-		System.out.println("Number of Tokens: "	+ index.getCollectionStatistics().getNumberOfTokens());
-		System.out.println("Number of Unique Terms: " + index.getCollectionStatistics().getNumberOfUniqueTerms());
-	}
-
 	public static void main(String[] args) throws FileNotFoundException {
-		String indexPrefix = "data";
-		String indexDirectory = "/Users/usiusi/tools/terrier-3.0/var/index";
-		LMQueryBuilder LMQueryAbstractBuilder = new LMQueryBuilder(indexDirectory, indexPrefix);
+		IndexCommons indexConfig = new IndexCommons("/Users/usiusi/tools/terrier-3.0/var/index", "data");
+		LMQueryBuilder LMQueryAbstractBuilder = new LMQueryBuilder();
+
+
 
 		int topTerms;
 		if(args.length>0)
@@ -89,15 +77,15 @@ public class LMQueryBuilder {
 			return;
 		}
 
-		HashMap<String, Integer > docIds = LMQueryAbstractBuilder.readDocIdsFromIndex(docIdsList);
+		HashMap<String, Integer > docIds = LMQueryAbstractBuilder.readDocIdsFromIndex(docIdsList, indexConfig.getIndex());
 	
 		for (String queryId: docIds.keySet()){
-			HashMap<Integer,Double> queryMLEstimate = Utils.computeAvgRelFreq(docIds.get(queryId), freqThreshold, index);
-			ArrayList<IntDouble> queryKLDivergence = Utils.computeKLDivergence(queryMLEstimate, index, N);
+			HashMap<Integer,Double> queryMLEstimate = Utils.computeAvgRelFreq(docIds.get(queryId), freqThreshold, indexConfig.getIndex());
+			ArrayList<IntDouble> queryKLDivergence = Utils.computeKLDivergence(queryMLEstimate, indexConfig.getIndex(), indexConfig.getTokenNumber());
 
 			if(weightedOutputQuery == 3 /* normalized weights */){
 				String filename = printFileName+"/normwFreqT"+freqThreshold+sectionName+ "Top"+topTerms+".txt";
-				LMQueryAbstractBuilder.printQueryTermsAndNormalizedWeights(queryKLDivergence, topTerms,filename,queryId);
+				LMQueryAbstractBuilder.printQueryTermsAndNormalizedWeights(queryKLDivergence, topTerms, filename, queryId, indexConfig.getIndex());
 			}
 		}
 
@@ -105,7 +93,7 @@ public class LMQueryBuilder {
 			
 	}
 
-	private HashMap <String, Integer> readDocIdsFromIndex(String filename) {
+	private HashMap <String, Integer> readDocIdsFromIndex(String filename, Index index) {
 		HashMap <String, Integer> docIdsMap = new HashMap <>();
 		
 		try {
@@ -119,7 +107,7 @@ public class LMQueryBuilder {
 		return docIdsMap;
 	}
 
-	private void printQueryTermsAndNormalizedWeights(ArrayList<IntDouble> weights, int max, String filename, String queryid)  {
+	private void printQueryTermsAndNormalizedWeights(ArrayList<IntDouble> weights, int max, String filename, String queryid, Index index)  {
 		int i;
 		PrintWriter p = null;
 		try {
